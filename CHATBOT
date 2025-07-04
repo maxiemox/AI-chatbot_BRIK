@@ -1,0 +1,57 @@
+import os
+from google import genai
+from google.genai import types
+
+def generate():
+    client = genai.Client(api_key="GET API KEY")
+
+    model = "gemini-2.5-pro"
+    history = []
+
+    config = types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(thinking_budget=-1),
+        response_mime_type="text/plain",
+        system_instruction=[
+            types.Part.from_text(text="""Be friendly, warm, and clear. Help students with code and tech career doubts. Keep responses concise unless asked for details. Encourage and support."""),
+        ],
+    )
+
+    while True:
+        question = input("\nYou: ").strip()
+        if question.lower() in ['exit', 'quit']:
+            print("Chatbot: Conversation ended! Catch you later 😄")
+            break
+        if question.lower() == 'clear':
+            history.clear()
+            os.system('cls' if os.name == 'nt' else 'clear')
+            print("Chatbot: History cleared and screen refreshed ✨")
+            continue
+        if not question:
+            print("Chatbot: Type something or 'exit' to quit 🚪")
+            continue
+
+        contents = history + [
+            types.Content(role="user", parts=[types.Part.from_text(text=question)])
+        ]
+
+        try:
+            response_text = ""
+            for chunk in client.models.generate_content_stream(
+                model=model,
+                contents=contents,
+                config=config,
+            ):
+                response_text += chunk.text
+
+            print(f"\nChatbot: {response_text.strip()}")
+            print(f"📊 Tokens used: {chunk.usage_metadata.total_token_count}")
+            history.extend([
+                types.Content(role="user", parts=[types.Part.from_text(text=question)]),
+                types.Content(role="model", parts=[types.Part.from_text(text=response_text)])
+            ])
+
+        except Exception as e:
+            print(f"❌ Error: {e}")
+
+if __name__ == "__main__":
+    generate()
